@@ -215,6 +215,8 @@
     <title>Instalint - online code inspection</title>
     <script>
 
+    languageVersion = "latest";
+
 	function onInit() {
 	    useLocationHashForToSelectALanguage();
    	    updateLocationHash();
@@ -228,28 +230,46 @@
 	}
 
 	function onLanguageChange() {
+	    languageVersion = "latest";
 	    updateLocationHash();
 	    analyze();
 	}
 
     function useLocationHashForToSelectALanguage() {
 	    var path = document.location.hash;
-	    var pathPattern = new RegExp("^#(/(.*?))+$", "");
+	    var pathPattern = new RegExp("^#(/.*)+$", "");
 	    var pathMatches = pathPattern.exec(path);
         var newLanguageValue = "JavaScript";
+        var newLanguageVersion = "latest";
         var languageSelect = document.getElementById("language");
 	    if (pathMatches) {
-	        var language = pathMatches[2];
+	        var locationWithinPage = pathMatches[1];
+
+	        var languagePattern = new RegExp("^(/(.*?))(/|$)", "");
+	        var languageMatches = languagePattern.exec(locationWithinPage);
+	        var language = languageMatches[2];
 	        for (var optionCounter in languageSelect.options) {
 	            var option = languageSelect.options[optionCounter];
 	            if (option.label == language || option.value == language) {
                     newLanguageValue = option.value;
 	            }
 	        }
+
+   	        var locationWithinLanguage = locationWithinPage.replace(languageMatches[1], "");
+	        var languageVersionPattern = new RegExp("^(/(.*?))(/|$)", "");
+	        var languageVersionMatches = languagePattern.exec(locationWithinLanguage);
+	        if (languageVersionMatches) {
+	            newLanguageVersion = languageVersionMatches[2];
+	        }
 	    }
 
-	    if (languageSelect.value != newLanguageValue) {
-	        languageSelect.value = newLanguageValue;
+	    if (languageSelect.value != newLanguageValue || languageVersion != newLanguageVersion) {
+	        if (languageSelect.value != newLanguageValue) {
+    	        languageSelect.value = newLanguageValue;
+	        }
+	        if (languageVersion != newLanguageVersion) {
+    	        languageVersion = newLanguageVersion;
+    	    }
     	    updateLocationHash();
     	    analyze();
 	    }
@@ -266,7 +286,12 @@
             }
         }
 
-   	    var newPath = "#/" + languageSelectLabel;
+        var languageVersionText = "";
+        if (languageVersion != "latest") {
+            languageVersionText = "/" + languageVersion;
+        }
+
+   	    var newPath = "#/" + languageSelectLabel + languageVersionText;
 	    if (document.location.hash != newPath) {
 	        document.location.hash = newPath;
 	    }
@@ -318,7 +343,7 @@
         } else {
             request.open(method, url, async);
             request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-            request.send("language=" + encodeURIComponent(language) + "&code=" + encodeURIComponent(code));
+            request.send("language=" + encodeURIComponent(language) + "&languageVersion=" + encodeURIComponent(languageVersion) + "&code=" + encodeURIComponent(code));
             document.getElementById("result").style.opacity = 0.7;
 		}
 	}

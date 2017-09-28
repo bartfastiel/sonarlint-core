@@ -32,33 +32,43 @@ import java.util.logging.Logger;
 
 public class LanguagePluginRepository {
 
-  private final Path pluginDir;
+  private Path workDir;
+  private Path pluginDir;
   private Properties properties;
 
-  public LanguagePluginRepository() {
-    String catalinaBase = System.getProperty("catalina.base");
-    Path workDir = Paths.get(catalinaBase, "work", "Catalina", "localhost", "ROOT");
-    Logger.getLogger(LanguagePluginRepository.class.getName()).warning(() -> "workDir: " + workDir.toAbsolutePath());
-    pluginDir = workDir.resolve("plugins");
-    Logger.getLogger(LanguagePluginRepository.class.getName()).warning(() -> "pluginDir: " + pluginDir.toAbsolutePath());
+  public void init() {
+    if (workDir == null) {
+      String catalinaBase = System.getProperty("catalina.base");
+      workDir = Paths.get(catalinaBase, "work", "Catalina", "localhost", "ROOT");
+      Logger.getLogger(LanguagePluginRepository.class.getName()).warning(() -> "workDir: " + workDir.toAbsolutePath());
+    }
 
-    Path propertyFile = workDir.resolve("settings.properties");
-    if (!Files.exists(propertyFile)) {
-      Logger.getLogger(LanguagePluginRepository.class.getName()).severe(() -> "Property file not found: " + propertyFile.toAbsolutePath());
-      throw new IllegalStateException("Property file not found");
+    if (pluginDir == null) {
+      pluginDir = workDir.resolve("plugins");
+      Logger.getLogger(LanguagePluginRepository.class.getName()).warning(() -> "pluginDir: " + pluginDir.toAbsolutePath());
     }
-    Properties properties = new Properties();
-    try {
-      properties.load(new FileInputStream(propertyFile.toFile()));
-    } catch (IOException e) {
-      Logger.getLogger(LanguagePluginRepository.class.getName()).severe(() -> "Property file not found: " + propertyFile.toAbsolutePath());
-      throw new IllegalStateException("Property file not found");
+
+    if (properties == null) {
+      Path propertyFile = workDir.resolve("settings.properties");
+      if (!Files.exists(propertyFile)) {
+        Logger.getLogger(LanguagePluginRepository.class.getName()).severe(() -> "Property file not found: " + propertyFile.toAbsolutePath());
+        throw new IllegalStateException("Property file not found");
+      }
+      Properties properties = new Properties();
+      try {
+        properties.load(new FileInputStream(propertyFile.toFile()));
+      } catch (IOException e) {
+        Logger.getLogger(LanguagePluginRepository.class.getName()).severe(() -> "Property file not found: " + propertyFile.toAbsolutePath());
+        throw new IllegalStateException("Property file not found");
+      }
+      this.properties = properties;
     }
-    this.properties = properties;
   }
 
-  public LanguagePlugin retrieve(String language) {
-    String fileProperty = properties.getProperty(language.toLowerCase(Locale.ENGLISH)+".plugin");
+  public LanguagePlugin retrieve(String language, String languageVersion) {
+    init();
+
+    String fileProperty = properties.getProperty(language.toLowerCase(Locale.ENGLISH)+".plugin" + (languageVersion == null ? "" : "." + languageVersion));
     Path plugin = pluginDir.resolve(fileProperty);
     URL url;
     try {

@@ -89,8 +89,15 @@ public class AnalyzerServlet extends HttpServlet {
       if (language == null || language.isEmpty()) {
         throw new IllegalStateException("Parameter language is required");
       }
+      String languageVersion = req.getParameter("languageVersion");
+      if (languageVersion.isEmpty()) {
+        languageVersion = null;
+      }
+      if (languageVersion != null && !languageVersion.matches("^[a-zA-Z0-9\\.]*$")) {
+        throw new IllegalStateException("Invalid language version");
+      }
 
-      LanguagePlugin languagePlugin = languagePluginRepository.retrieve(language);
+      LanguagePlugin languagePlugin = languagePluginRepository.retrieve(language, languageVersion);
       StandaloneSonarLintImpl sonarlint = initSonarLint(languagePlugin);
 
       List<Issue> issues = getIssues(json, sonarlint, code, language);
