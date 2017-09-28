@@ -22,14 +22,13 @@ package org.sonarlint.daemon;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -44,23 +43,30 @@ import org.sonarsource.sonarlint.daemon.proto.SonarlintDaemon.AnalyzeContentRequ
 import org.sonarsource.sonarlint.daemon.proto.SonarlintDaemon.Issue;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.singletonList;
 
 public class AnalyzerServlet extends HttpServlet {
 
-  private StandaloneSonarLintImpl sonarlint;
+  private Map<LanguagePlugin, StandaloneSonarLintImpl> sonarLintRepository = new HashMap<>();
+  private LanguagePluginRepository languagePluginRepository;
 
-  private StandaloneSonarLintImpl initSonarLint() {
-    if (sonarlint == null) {
-      String catalinaBase = System.getProperty("catalina.base");
-      Path workDir = Paths.get(catalinaBase, "work", "Catalina", "localhost", "ROOT");
+  @Override
+  public void init() throws ServletException {
+    super.init();
+    languagePluginRepository = new LanguagePluginRepository();
+  }
+
+  private StandaloneSonarLintImpl initSonarLint(LanguagePlugin languagePlugin) {
+    StandaloneSonarLintImpl sonarLint = sonarLintRepository.get(languagePlugin);
+    if (sonarLint == null) {
       try {
-        sonarlint = new StandaloneSonarLintImpl(Utils.getAnalyzers(workDir));
+        sonarLint = new StandaloneSonarLintImpl(singletonList(languagePlugin.getUrl()));
       } catch (Exception e) {
-        Logger.getLogger(getClass().getName()).warning(() -> "workDir: " + workDir.toAbsolutePath());
         throw new IllegalStateException("Cannot initialize analyzers", e);
       }
+      sonarLintRepository.put(languagePlugin, sonarLint);
     }
-    return sonarlint;
+    return sonarLint;
   }
 
   @Override
@@ -81,11 +87,11 @@ public class AnalyzerServlet extends HttpServlet {
 
       String language = req.getParameter("language");
       if (language == null || language.isEmpty()) {
-        language = "JavaScript";
-        json.value("No language specified, defaulting to " + language);
+        throw new IllegalStateException("Parameter language is required");
       }
 
-      StandaloneSonarLintImpl sonarlint = initSonarLint();
+      LanguagePlugin languagePlugin = languagePluginRepository.retrieve(language);
+      StandaloneSonarLintImpl sonarlint = initSonarLint(languagePlugin);
 
       List<Issue> issues = getIssues(json, sonarlint, code, language);
       List<SonarlintDaemon.RuleDetails> rules = getRules(json, sonarlint, issues);
