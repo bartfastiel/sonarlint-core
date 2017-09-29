@@ -19,56 +19,29 @@
  */
 package org.sonarlint.daemon;
 
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.logging.Logger;
 
 public class LanguagePluginRepository {
 
-  private Path workDir;
   private Path pluginDir;
-  private Properties properties;
 
-  public void init() {
-    if (workDir == null) {
-      String catalinaBase = System.getProperty("catalina.base");
-      workDir = Paths.get(catalinaBase, "work", "Catalina", "localhost", "ROOT");
-      Logger.getLogger(LanguagePluginRepository.class.getName()).warning(() -> "workDir: " + workDir.toAbsolutePath());
-    }
-
+  public void init(Path workDir) {
     if (pluginDir == null) {
       pluginDir = workDir.resolve("plugins");
-      Logger.getLogger(LanguagePluginRepository.class.getName()).warning(() -> "pluginDir: " + pluginDir.toAbsolutePath());
-    }
-
-    if (properties == null) {
-      Path propertyFile = workDir.resolve("settings.properties");
-      if (!Files.exists(propertyFile)) {
-        Logger.getLogger(LanguagePluginRepository.class.getName()).severe(() -> "Property file not found: " + propertyFile.toAbsolutePath());
-        throw new IllegalStateException("Property file not found");
-      }
-      Properties properties = new Properties();
-      try {
-        properties.load(new FileInputStream(propertyFile.toFile()));
-      } catch (IOException e) {
-        Logger.getLogger(LanguagePluginRepository.class.getName()).severe(() -> "Property file not found: " + propertyFile.toAbsolutePath());
-        throw new IllegalStateException("Property file not found");
-      }
-      this.properties = properties;
+      Logger.getLogger(Backend.class.getName()).warning(() -> "pluginDir: " + pluginDir.toAbsolutePath());
     }
   }
 
-  public LanguagePlugin retrieve(String language, String languageVersion) {
-    init();
-
-    String fileProperty = properties.getProperty(language.toLowerCase(Locale.ENGLISH)+".plugin" + (languageVersion == null ? "" : "." + languageVersion));
+  public LanguagePlugin retrieve(String language, String languageVersion, Properties properties) {
+    if ("latest".equals(languageVersion)) {
+      languageVersion = properties.getProperty(language.toLowerCase(Locale.ENGLISH)+".latestVersion");
+    }
+    String fileProperty = properties.getProperty(language.toLowerCase(Locale.ENGLISH)+".plugin." + languageVersion);
     Path plugin = pluginDir.resolve(fileProperty);
     URL url;
     try {
@@ -76,6 +49,6 @@ public class LanguagePluginRepository {
     } catch (MalformedURLException e) {
       throw new IllegalStateException("Cannot locate language plugin", e);
     }
-    return new LanguagePlugin(url);
+    return new LanguagePlugin(url, languageVersion);
   }
 }

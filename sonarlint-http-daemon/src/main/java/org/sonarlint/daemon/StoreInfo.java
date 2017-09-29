@@ -19,37 +19,31 @@
  */
 package org.sonarlint.daemon;
 
-import java.net.URL;
+public class StoreInfo {
 
-public class LanguagePlugin {
-  private final URL url;
-  private final String languageVersion;
+  private String languageVersion;
+  private String storedAs;
 
-  public LanguagePlugin(URL url, String languageVersion) {
-    this.url = url;
+  public StoreInfo(String languageVersion, String storedAs) {
     this.languageVersion = languageVersion;
-  }
-
-  public URL getUrl() {
-    return url;
+    this.storedAs = storedAs;
   }
 
   public String getLanguageVersion() {
     return languageVersion;
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-
-    LanguagePlugin that = (LanguagePlugin) o;
-
-    return url != null ? url.equals(that.url) : that.url == null;
+  public StoreInfo setLanguageVersion(String languageVersion) {
+    this.languageVersion = languageVersion;
+    return this;
   }
 
-  @Override
-  public int hashCode() {
-    return url != null ? url.hashCode() : 0;
+  public String getStoredAs() {
+    return storedAs;
+  }
+
+  public StoreInfo setStoredAs(String storedAs) {
+    this.storedAs = storedAs;
+    return this;
   }
 }

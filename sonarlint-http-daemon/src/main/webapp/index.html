@@ -103,7 +103,7 @@
             grid-row-gap: 0;
             grid-column-gap: 10px;
             grid-template-areas:
-              "logo-cell about-cell"
+              "logo-cell link-cell"
             ;
 
         }
@@ -117,15 +117,18 @@
             margin: 0;
         }
 
-        #about {
-            grid-area: about-cell;
-            color: white;
+        #link {
+            grid-area: link-cell;
             justify-self: end;
             align-self: center;
-            font-size: 10px;
-            padding: 0 8px 0 0;
-            font-weight: normal;
+            padding: 0 8px 4px 0;
             margin: 0;
+        }
+
+        #link a {
+            color: white;
+            font-size: 10px;
+            font-weight: normal;
         }
 
         #languageSelect {
@@ -216,62 +219,82 @@
     <script>
 
     languageVersion = "latest";
+    storedAs = "";
 
 	function onInit() {
-	    useLocationHashForToSelectALanguage();
+	    useLocationHash();
    	    updateLocationHash();
     	window.onhashchange = onLocationHashChange;
-    	analyze();
+    	analyze(false);
 	}
 
 	function onLocationHashChange() {
-	    useLocationHashForToSelectALanguage();
+	    useLocationHash();
 	    updateLocationHash();
 	}
 
 	function onLanguageChange() {
 	    languageVersion = "latest";
 	    updateLocationHash();
-	    analyze();
+	    analyze(false);
 	}
 
-    function useLocationHashForToSelectALanguage() {
+	function onInput() {
+	    storedAs = "";
+	    analyze(false);
+	}
+
+	function onStoreRequest() {
+	    analyze(true);
+	}
+
+    function useLocationHash() {
 	    var path = document.location.hash;
 	    var pathPattern = new RegExp("^#(/.*)+$", "");
+
 	    var pathMatches = pathPattern.exec(path);
         var newLanguageValue = "JavaScript";
         var newLanguageVersion = "latest";
+        var newStoredAs = "";
         var languageSelect = document.getElementById("language");
 	    if (pathMatches) {
-	        var locationWithinPage = pathMatches[1];
+	        var pathPartPattern = new RegExp("^(/(.*?))(/.*$|$)", "");
 
-	        var languagePattern = new RegExp("^(/(.*?))(/|$)", "");
-	        var languageMatches = languagePattern.exec(locationWithinPage);
-	        var language = languageMatches[2];
-	        for (var optionCounter in languageSelect.options) {
-	            var option = languageSelect.options[optionCounter];
-	            if (option.label == language || option.value == language) {
-                    newLanguageValue = option.value;
-	            }
-	        }
+	        var languageMatches = pathPartPattern.exec(pathMatches[1]);
+	        if (languageMatches) {
+                var language = languageMatches[2];
 
-   	        var locationWithinLanguage = locationWithinPage.replace(languageMatches[1], "");
-	        var languageVersionPattern = new RegExp("^(/(.*?))(/|$)", "");
-	        var languageVersionMatches = languagePattern.exec(locationWithinLanguage);
-	        if (languageVersionMatches) {
-	            newLanguageVersion = languageVersionMatches[2];
+                for (var optionCounter in languageSelect.options) {
+                    var option = languageSelect.options[optionCounter];
+                    if (option.label == language || option.value == language) {
+                        newLanguageValue = option.value;
+                    }
+                }
+
+                var languageVersionMatches = pathPartPattern.exec(languageMatches[3]);
+                if (languageVersionMatches) {
+                    newLanguageVersion = languageVersionMatches[2];
+
+                    var storedAsMatches = pathPartPattern.exec(languageVersionMatches[3]);
+                    if (storedAsMatches) {
+                        newStoredAs = storedAsMatches[2];
+                    }
+                }
 	        }
 	    }
 
-	    if (languageSelect.value != newLanguageValue || languageVersion != newLanguageVersion) {
+	    if (languageSelect.value != newLanguageValue || languageVersion != newLanguageVersion || storedAs != newStoredAs) {
 	        if (languageSelect.value != newLanguageValue) {
     	        languageSelect.value = newLanguageValue;
 	        }
 	        if (languageVersion != newLanguageVersion) {
     	        languageVersion = newLanguageVersion;
     	    }
+	        if (storedAs != newStoredAs) {
+    	        storedAs = newStoredAs;
+    	    }
     	    updateLocationHash();
-    	    analyze();
+    	    analyze(false);
 	    }
     }
 
@@ -286,18 +309,20 @@
             }
         }
 
-        var languageVersionText = "";
+        var newPath = "#/" + language;
         if (languageVersion != "latest") {
-            languageVersionText = "/" + languageVersion;
+            newPath += "/" + languageVersion;
+            if (storedAs != "") {
+                newPath += "/" + storedAs;
+            }
         }
 
-   	    var newPath = "#/" + languageSelectLabel + languageVersionText;
 	    if (document.location.hash != newPath) {
 	        document.location.hash = newPath;
 	    }
     }
 
-	function analyze() {
+	function analyze(store) {
 		document.getElementById("result").style.opacity = 0.5;
         var loc = window.location;
         var baseUrl = loc.protocol + "//" + loc.hostname + (loc.port? ":"+loc.port : "") + "/" + loc.pathname.split('/')[1];
@@ -329,21 +354,41 @@
                 } else {
                     newContent += "<br/>";
                 }
-                newContent += response.lines[line].code;
+                var l = response.lines[line].code;
+                newContent += l;
             }
 
+            if (storedAs != "" || store) {
+                document.getElementById("input").value = response.code;
+                if (response.storedAs) {
+                    storedAs = response.storedAs;
+                    languageVersion = response.languageVersion;
+                } else {
+                    storedAs = "";
+                }
+            }
+            updateLocationHash();
             document.getElementById("output").innerHTML = newContent;
 		}
 
         var language = document.getElementById("language").value;
         var code = document.getElementById("input").value;
 
-        if (code === "") {
+        if (code === "" && storedAs === "") {
             document.getElementById("output").innerHTML = newContent;
         } else {
             request.open(method, url, async);
             request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-            request.send("language=" + encodeURIComponent(language) + "&languageVersion=" + encodeURIComponent(languageVersion) + "&code=" + encodeURIComponent(code));
+            var params = "language=" + encodeURIComponent(language) + "&languageVersion=" + encodeURIComponent(languageVersion);
+            if (storedAs != "") {
+                params += "&restore=" + storedAs;
+            } else {
+                if (store == true) {
+                    params += "&store=true";
+                }
+                params += "&code=" + encodeURIComponent(code);
+            }
+            request.send(params);
             document.getElementById("result").style.opacity = 0.7;
 		}
 	}
@@ -358,8 +403,10 @@
         instalint
     </h1>
 
-    <a id="about" href="/about">About</a>
-
+    <div id="link">
+        <a id="store" href="javascript:onStoreRequest()">Generate link</a>
+        <a id="about" href="/about">About</a>
+    </div>
 </div>
 
 <h2 id="languageSelect">
@@ -373,7 +420,7 @@
     <span class="broad">code</span>
 </h2>
 
-<textarea id="input" oninput="analyze()" onchange="analyze()" cols="80" rows="20" spellcheck="false">arr = [1, 2, 3];
+<textarea id="input" oninput="onInput()" onchange="onInput()" cols="80" rows="20" spellcheck="false">arr = [1, 2, 3];
 for (var x in arr) {
 console.log(x);
 }

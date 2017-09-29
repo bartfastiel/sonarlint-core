@@ -61,22 +61,15 @@
             <artifactId>guava</artifactId>
             <version>23.0</version>
         </dependency>
-
-        <!-- 		<dependency> -->
-<!-- 			<groupId>${project.groupId}</groupId> -->
-<!-- 			<artifactId>sonarlint-daemon-protocol</artifactId> -->
-<!-- 			<version>${project.version}</version> -->
-<!-- 		</dependency> -->
-<!-- 		<dependency> -->
-<!-- 			<groupId>org.sonarsource.sonarlint.core</groupId> -->
-<!-- 			<artifactId>sonarlint-core</artifactId> -->
-<!-- 			<version>${project.version}</version> -->
-<!-- 		</dependency> -->
-<!-- 		<dependency> -->
-<!-- 			<groupId>${project.groupId}</groupId> -->
-<!-- 			<artifactId>sonarlint-client-api</artifactId> -->
-<!-- 			<version>${project.version}</version> -->
-<!-- 		</dependency> -->
-
+		<dependency>
+			<groupId>org.elasticsearch.client</groupId>
+			<artifactId>elasticsearch-rest-high-level-client</artifactId>
+			<version>5.6.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-core</artifactId>
+			<version>2.9.1</version>
+		</dependency>
 	</dependencies>
 </project>
